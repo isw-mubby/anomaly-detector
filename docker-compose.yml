@@ -1,5 +1,3 @@
-version: "3.9"
-
 # -----------------------------------------------------------------------
 # HNG Anomaly Detection Stack
 # Services: nginx, nextcloud, detector
