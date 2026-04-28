@@ -1,8 +1,5 @@
 FROM python:3.11-slim
 
-LABEL maintainer="HNG DevSecOps Team"
-LABEL description="HNG Anomaly Detection Engine"
-
 # Install iptables (required for blocking)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends iptables && \
