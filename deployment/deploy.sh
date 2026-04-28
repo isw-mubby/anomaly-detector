@@ -168,7 +168,7 @@ fi
 # Write the dashboard vhost — proxies the public domain to the detector's port
 cat > /etc/nginx/sites-available/hng-dashboard <<NGINXEOF
 server {
-    listen 80;
+    listen 8081;
     server_name ${DASHBOARD_DOMAIN};
 
     # Proxy to Flask dashboard running in the detector container (host network)
@@ -200,7 +200,7 @@ echo ""
 log "Step 5/7 — Pulling Docker images (this may take a few minutes)..."
 
 cd "${REPO_DIR}"
-docker compose pull --quiet
+docker compose pull nginx db nextcloud --quiet
 success "Images pulled."
 
 log "Step 6/7 — Building detector image..."

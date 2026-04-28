@@ -94,7 +94,6 @@ services:
     build:
       context: ./detector
       dockerfile: Dockerfile
-    image: hng-detector:latest
     container_name: hng-detector
     restart: unless-stopped
     cap_add:
