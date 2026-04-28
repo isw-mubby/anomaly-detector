@@ -1,0 +1,110 @@
+version: "3.9"
+
+# -----------------------------------------------------------------------
+# HNG Anomaly Detection Stack
+# Services: nginx, nextcloud, detector
+# Shared log volume: HNG-nginx-logs (nginx writes, others read-only)
+# -----------------------------------------------------------------------
+
+volumes:
+  HNG-nginx-logs:      # Named volume — nginx writes, detector + nextcloud read
+  nextcloud-data:      # Nextcloud user files
+  nextcloud-db:        # MariaDB data
+
+networks:
+  hng-net:
+    driver: bridge
+
+services:
+
+  # -----------------------------------------------------------------------
+  # Nginx — reverse proxy with JSON access logs
+  # -----------------------------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: hng-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - HNG-nginx-logs:/var/log/nginx          # WRITE access
+    networks:
+      - hng-net
+    depends_on:
+      - nextcloud
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # -----------------------------------------------------------------------
+  # Nextcloud — pre-built HNG image (do not modify)
+  # -----------------------------------------------------------------------
+  nextcloud:
+    image: kefaslungu/hng-nextcloud:latest
+    container_name: hng-nextcloud
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST:     db
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER:     nextcloud
+      MYSQL_PASSWORD: "${NEXTCLOUD_DB_PASSWORD:-hng_secret_2024}"
+      NEXTCLOUD_ADMIN_USER:     "${NEXTCLOUD_ADMIN_USER:-admin}"
+      NEXTCLOUD_ADMIN_PASSWORD: "${NEXTCLOUD_ADMIN_PASSWORD:-hng_admin_2024}"
+      NEXTCLOUD_TRUSTED_DOMAINS: "${SERVER_IP:-localhost}"
+    volumes:
+      - nextcloud-data:/var/www/html
+      - HNG-nginx-logs:/var/log/nginx:ro      # READ-ONLY
+    networks:
+      - hng-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # -----------------------------------------------------------------------
+  # MariaDB — Nextcloud database
+  # -----------------------------------------------------------------------
+  db:
+    image: mariadb:10.11
+    container_name: hng-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-hng_root_2024}"
+      MYSQL_DATABASE:      nextcloud
+      MYSQL_USER:          nextcloud
+      MYSQL_PASSWORD:      "${NEXTCLOUD_DB_PASSWORD:-hng_secret_2024}"
+    volumes:
+      - nextcloud-db:/var/lib/mysql
+    networks:
+      - hng-net
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------------------
+  # Anomaly Detector — Python daemon
+  # -----------------------------------------------------------------------
+  detector:
+    build:
+      context: ./detector
+      dockerfile: Dockerfile
+    image: hng-detector:latest
+    container_name: hng-detector
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN    # Required for iptables manipulation
+    network_mode: host   # Must be host-network to run real iptables rules
+    environment:
+      SLACK_WEBHOOK_URL: "${SLACK_WEBHOOK_URL:-}"
+    volumes:
+      - HNG-nginx-logs:/var/log/nginx:ro       # READ-ONLY
+      - /var/log/detector:/var/log/detector    # Audit log output
+      - ./detector/config.yaml:/app/config.yaml:ro
+    depends_on:
+      - nginx

@@ -1,0 +1,54 @@
+# HNG Anomaly Detection Engine - Configuration
+# All detection thresholds live here — never hardcoded in source files
+
+server:
+  dashboard_port: 8080
+  dashboard_host: "0.0.0.0"
+  dashboard_refresh_seconds: 3
+
+log:
+  nginx_log_path: "/var/log/nginx/hng-access.log"
+  audit_log_path: "/var/log/detector/audit.log"
+  log_level: "INFO"
+
+sliding_window:
+  # Rolling window for per-IP and global rate tracking (seconds)
+  window_seconds: 60
+
+baseline:
+  # Rolling window for computing mean/stddev (minutes)
+  window_minutes: 30
+  # How often to recalculate baseline (seconds)
+  recalc_interval_seconds: 60
+  # Minimum samples needed before baseline is trusted
+  min_samples: 10
+  # Floor values to avoid division-by-zero on brand new installs
+  floor_mean: 1.0
+  floor_stddev: 0.5
+
+detection:
+  # Z-score threshold — flag if rate deviates this many stddevs from mean
+  zscore_threshold: 3.0
+  # Rate multiplier threshold — flag if rate > N * baseline_mean
+  rate_multiplier_threshold: 5.0
+  # Error surge: flag IP if its 4xx/5xx rate is this multiple of baseline error rate
+  error_surge_multiplier: 3.0
+  # When error surge detected, tighten thresholds by this factor
+  error_surge_tighten_factor: 0.6
+
+blocking:
+  # iptables chain to insert DROP rules
+  iptables_chain: "INPUT"
+  # Must detect-and-block within this many seconds
+  max_response_seconds: 10
+  # Unban backoff schedule (minutes) — after last entry, ban is permanent
+  unban_schedule_minutes: [10, 30, 120]
+
+slack:
+  # Set SLACK_WEBHOOK_URL env var or put it here
+  webhook_url: ""  # overridden by SLACK_WEBHOOK_URL environment variable
+  timeout_seconds: 5
+
+dashboard:
+  top_ips_count: 10
+  metrics_history_minutes: 60
