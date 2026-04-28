@@ -8,9 +8,9 @@
 
 | Resource | URL |
 |---|---|
-| **Server IP** | `` |
-| **Metrics Dashboard** | `` |
-| **Nextcloud** | `` |
+| **Server IP** | `34.66.109.206` |
+| **Metrics Dashboard** | `34.66.109.206:8081` |
+| **Nextcloud** | `34.66.109.206` |
 
 ---
 
@@ -198,14 +198,6 @@ hng-anomaly-detector/
 │   └── nginx.conf       # JSON logs, X-Forwarded-For, Nextcloud proxy
 ├── docs/
 │   └── architecture.png
-├── screenshots/
-│   ├── Tool-running.png
-│   ├── Ban-slack.png
-│   ├── Unban-slack.png
-│   ├── Global-alert-slack.png
-│   ├── Iptables-banned.png
-│   ├── Audit-log.png
-│   └── Baseline-graph.png
 ├── deployment/
 │   └── deploy.sh
 ├── docker-compose.yml
